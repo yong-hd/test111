@@ -34,7 +34,7 @@ cd ~/.hermes/workspace/magma-finance-lab
 | --- | --- | --- |
 | `~/.hermes` (또는 `$HERMES_HOME`) | 프로필·SOUL·스킬·칸반·크론·workspace·council 기록 | 8.2 이후 전부 유실 |
 | `~/.local` | `uv tool install kwcli`, `hermes` 실행 파일, uv 캐시 | `kiwoomcli` 사라짐 |
-| `~/.local/share/keyrings` | 8.1의 App Key·Secret (gnome-keyring 사용 시) | 8.1 재설정 필요 |
+| `~/.local/share/python_keyring` | 8.1의 App Key·Secret (파일 백엔드) | 8.1 재설정 필요 |
 | `~/.hermes/workspace/vibe-finance-kit/.venv` | Ada MCP가 **절대경로로** 등록된 실행 파일 | Ada MCP 연결 끊김 |
 
 `docker compose up -d`로 이미지만 갱신해도 컨테이너는 재생성됩니다. `scripts/docker-preflight.sh`의

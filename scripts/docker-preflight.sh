@@ -35,7 +35,7 @@ done
 echo "== 1. 영속 볼륨 (컨테이너 재생성 시 사라지면 안 되는 경로)"
 docker inspect -f '{{range .Mounts}}    {{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' "$C"
 MOUNTS="$(docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$C")"
-for p in "$HH" "$CHOME/.local" "$CHOME/.local/share/keyrings"; do
+for p in "$HH" "$CHOME/.local" "$CHOME/.local/share/python_keyring"; do
   hit=""
   while IFS= read -r m; do
     [ -n "$m" ] && case "$p/" in "$m"/*) hit="$m";; esac
