@@ -106,6 +106,25 @@ HERMES_CONTAINER=<컨테이너> HERMES_USER=<사용자> ./scripts/docker-preflig
    (`python3 scripts/validate_artifact.py artifacts/analysis/etf-analysis-snapshot-069500.json`).
 9. **평일 18:30 수집 크론** — 등록 후 다음 실행 시각의 시간대가 KST인지 확인(0-4).
 
+### 8.2 보충 — Ada에 Supabase MCP 연결 (이 VPS, 2026-09-28)
+
+7장을 건너뛰어 Supabase 프로젝트와 Ada 연결이 없었습니다. 새 프로젝트(Free, Seoul)를 만들고 원격 MCP를
+**PAT + 헤더 인증**으로 붙였습니다(컨테이너에 브라우저가 없어 OAuth 대신).
+
+```bash
+# 컨테이너 안, hermes 사용자 — 한 줄씩, 프롬프트가 돌아온 뒤 다음 줄
+read -r -p "Supabase Reference ID: " REF; REF=$(printf '%s' "$REF" | tr -d '[:space:]')
+read -r -s -p "Supabase PAT (sbp_...): " TK; echo; TK=$(printf '%s' "$TK" | tr -d '[:space:]')
+printf 'MCP_SUPABASE_API_KEY=%s\n' "$TK" >> /opt/data/profiles/ada/.env; chmod 600 /opt/data/profiles/ada/.env; unset TK
+hermes -p ada mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=${REF}&features=database,debugging,docs" --auth header
+```
+
+- `project_ref`로 이 프로젝트 하나에만, `features`로 DB·진단·문서 도구 8개만 엽니다(스토리지·함수·브랜치·계정 도구 없음).
+- 토큰은 `/opt/data/profiles/ada/.env`(600)에만 있고 `config.yaml`에는 변수 이름만 들어갑니다.
+- **함정:** 가려진 입력창에 여러 번 붙여 넣으면 토큰이 반복 저장됩니다(길이 44의 배수). `grep -o sbp_ | wc -l`로 확인.
+  `hermes mcp add`의 인증 질문에서 `Ctrl+C`는 중단되지 않고 다음 질문(토큰)으로 넘어가므로, 실수했으면 끝까지 가서 `Save config anyway? → N` 후 `.env`의 `MCP_SUPABASE_API_KEY` 줄을 지웁니다.
+- 폐기: Supabase 콘솔 Access Tokens에서 해당 토큰 Revoke.
+
 ## 8.3 백테스트 (Docker 순서)
 
 Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치는** 단계(10단계 `backtest/rules.md` 근거 칸)만 방법을 정합니다:
