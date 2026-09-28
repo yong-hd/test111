@@ -119,32 +119,21 @@ hpre
   `$HOME/.hermes/workspace/magma-finance-lab`(= 위 경로)로 고정하므로 서로 섞이지 않습니다.
 - `/opt/data/workspace`는 비어 있으며 쓰지 않습니다.
 
-### 3-2. 시간대를 KST로
+### 3-2. 시간대를 KST로 — Hermes 설정으로 (적용 완료 2026-09-28)
 
-컨테이너가 UTC라서 8.2의 평일 18:30 수집, 8.4의 평일 08:40 판단 크론이 어긋날 수 있습니다.
-
-```bash
-docker exec "$HC" bash -lc 'ls /usr/share/zoneinfo/Asia/Seoul && TZ=Asia/Seoul date'
-```
-
-KST 시각이 나오면 `/docker/hermes-agent-yx1l/docker-compose.yml`의 hermes-agent 서비스에 추가합니다.
-
-```yaml
-    environment:
-      - TZ=Asia/Seoul
-```
+컨테이너는 UTC지만, Hermes에는 `timezone` 설정이 있어 컨테이너를 재생성하지 않고 KST를 쓸 수 있습니다.
+기본 프로필(게이트웨이·크론 스케줄러)과 Sam 프로필에 넣었습니다.
 
 ```bash
-cd /docker/hermes-agent-yx1l
-tar czf /root/hermes-data-$(date +%Y%m%d-%H%M).tgz data docker-compose.yml   # 먼저 백업
-docker compose up -d                                                          # 재생성 (데이터는 /opt/data에 그대로)
-export HC=$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1)
-docker exec "$HC" bash -lc 'date "+%Z %z"; hermes gateway status 2>&1 | head -3'
+# 컨테이너 안, hermes 사용자 — 이미 있으면 건너뜀, 백업 후 끝에 한 줄 추가
+for f in /opt/data/config.yaml /opt/data/profiles/sam/config.yaml; do
+  grep -q "^timezone:" "$f" || { cp "$f" "$f.bak-$(date +%Y%m%d-%H%M%S)"; printf '\ntimezone: Asia/Seoul\n' >> "$f"; }
+done
+hermes -p sam config 2>&1 | grep -i timezone      # Timezone: Asia/Seoul
 ```
 
-이미 `environment:` 블록이 있으면 그 안에 한 줄만 추가합니다. 재생성해도 `/opt/data` 밖의 것
-(컨테이너 안에서 `apt install`한 패키지 등)만 사라지고, Hermes 데이터와 `kiwoomcli`는 남습니다.
-크론 등록 뒤에는 "다음 실행 시각"이 KST로 보이는지 확인합니다.
+적용은 호스트에서 `docker restart "$HC"`. 크론을 쓰는 다른 프로필(Ada 품질 카드 등)에도 필요하면 같은 줄을 추가합니다.
+크론 등록 후 "다음 실행 시각"이 KST인지 최종 확인합니다. `date`는 계속 UTC로 나오는 게 정상입니다.
 
 ### 3-3. 점검 중 함께 보인 경고 (강의 전 정리 권장)
 
