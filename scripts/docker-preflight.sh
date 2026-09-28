@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Hermes Docker 환경 사전 점검 (8.2~8.5 공통). 읽기 전용이며 아무것도 변경하지 않는다.
 # VPS 호스트에서 실행한다:
-#   HERMES_CONTAINER=hermes HERMES_USER=hermes ./scripts/docker-preflight.sh
+#   ./scripts/docker-preflight.sh                      (hermes-agent 컨테이너 자동 탐지)
+#   HERMES_CONTAINER=<이름> HERMES_USER=<사용자> ./scripts/docker-preflight.sh
 # 비밀값·토큰·계좌번호는 출력하지 않는다. kiwoomcli auth status는 지정한 항목 줄만 옮긴다.
 set -u
 
-C="${HERMES_CONTAINER:-hermes}"
+C="${HERMES_CONTAINER:-${HC:-$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1)}}"
 U="${HERMES_USER:-}"
 PROFILE="${KIWOOM_PROFILE:-모의계좌}"
 
@@ -25,7 +26,14 @@ CHOME="$(x 'echo $HOME')"
 HH="$(x 'echo ${HERMES_HOME:-$HOME/.hermes}')"
 echo "  사용자: $(x whoami)  HOME=$CHOME  HERMES_HOME=$HH"
 
+echo "== 0b. 외부 노출 포트"
+docker inspect -f '{{range $p, $b := .NetworkSettings.Ports}}{{range $b}}{{$p}} <- {{.HostIp}}:{{.HostPort}}{{"\n"}}{{end}}{{end}}' "$C" | while IFS= read -r l; do
+  [ -z "$l" ] && continue
+  case "$l" in *"<- 127.0.0.1:"*|*"<- ::1:"*) ok "$l";; *) warn "$l — 모든 인터페이스에 공개됨. 방화벽/인증 확인, 가능하면 127.0.0.1 바인딩 + SSH 터널";; esac
+done
+
 echo "== 1. 영속 볼륨 (컨테이너 재생성 시 사라지면 안 되는 경로)"
+docker inspect -f '{{range .Mounts}}    {{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' "$C"
 MOUNTS="$(docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$C")"
 for p in "$HH" "$CHOME/.local" "$CHOME/.local/share/keyrings"; do
   hit=""
@@ -48,7 +56,7 @@ done
 echo "== 4. 게이트웨이 (칸반 디스패치·슬랙·council 필수)"
 GW="$(x 'hermes gateway status' 2>&1 | head -20)"
 printf '%s\n' "$GW" | sed 's/^/    /'
-GWPID="$(x 'pgrep -f "hermes.*gateway" | head -1' 2>/dev/null)"
+GWPID="$(x 'pgrep -f "gateway" | head -1' 2>/dev/null)"
 if [ -n "$GWPID" ]; then
   ok "게이트웨이 프로세스 PID $GWPID"
   # 게이트웨이/크론 프로세스가 Keyring(Secret Service)에 닿는지: DBus 주소와 TZ 존재 여부만 확인
@@ -57,7 +65,7 @@ if [ -n "$GWPID" ]; then
   else warn "게이트웨이 환경에 DBUS_SESSION_BUS_ADDRESS 없음 — 카드/크론에서 kiwoomcli가 Keyring을 못 찾을 수 있음 (런북 0-3 참고)"; fi
   printf '%s\n' "$GENV" | grep -q '^TZ=' && ok "게이트웨이 $(printf '%s\n' "$GENV" | grep '^TZ=')" || warn "게이트웨이 환경에 TZ 미설정"
 else
-  fail "게이트웨이 프로세스 없음 — 카드가 ready에서 멈춤"
+  warn "pgrep로 게이트웨이 프로세스를 찾지 못함 — 위 status 출력으로 판단 (멈춰 있으면 카드가 ready에서 멈춤). Keyring·TZ 환경 확인은 건너뜀"
 fi
 
 echo "== 5. 키움 모의계좌 인증 (지정 항목만)"
@@ -66,7 +74,9 @@ x "kiwoomcli auth status --profile '$PROFILE'" 2>&1 \
   | sed 's/^/    /' || fail "auth status 실패"
 
 echo "== 6. 작업 폴더"
-W="$CHOME/.hermes/workspace"
+W="$HH/workspace"
+x "test -d '$W'" || { x "test -d '$CHOME/.hermes/workspace'" && W="$CHOME/.hermes/workspace"; }
+echo "  workspace: $W"
 for d in magma-finance-lab vibe-finance-kit; do
   if x "test -d '$W/$d'"; then ok "$W/$d"; else warn "$W/$d 없음"; fi
 done
@@ -81,4 +91,5 @@ fi
 
 echo "== 7. 프로필"
 x 'hermes profile list 2>/dev/null || ls "${HERMES_HOME:-$HOME/.hermes}/profiles" 2>/dev/null' | sed 's/^/    /'
+x 'hermes profile show 2>/dev/null | head -5' | sed 's/^/    현재 기본 프로필: /'
 echo "  필요: sam, ada, oliver (8.2) · noah (8.4) · sophie (8.5)"

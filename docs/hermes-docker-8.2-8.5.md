@@ -11,21 +11,22 @@ Docker 기준으로 다시 정리합니다. 프롬프트 원문은 `magma-financ
 
 ## 0. 시작 전에: Docker라서 다른 네 가지
 
-### 0-1. 셸은 항상 "같은 사용자 + 로그인 셸"로 들어간다
+### 0-1. 셸은 항상 "기본 사용자 + 로그인 셸"로 들어간다
+
+접속 방법과 도우미(`hsh`, `hx`, `hp`)는 [운영 가이드](./hermes-vps-operations.md) 2장을 따릅니다.
 
 ```bash
-# VPS 호스트에서
-docker exec -it -u <hermes 사용자> <컨테이너> bash -l
+source scripts/hermes-env.sh     # VPS 호스트에서, HC 자동 설정
+hsh                              # = docker exec -it "$HC" bash -l
 cd ~/.hermes/workspace/magma-finance-lab
 ```
 
-- `-u`를 빼면 root로 들어가 **다른 HOME·다른 Keyring**을 보게 됩니다. 8.1에서 `kiwoomcli setup`을
-  한 사용자와 반드시 같아야 합니다.
+- `-u`를 붙이지 않습니다. `docker exec "$HC" hermes …`가 동작하는 기본 사용자가 8.1의 `kiwoomcli setup`·Keyring 주인입니다.
 - `bash -l`을 빼면 `~/.local/bin`이 PATH에 없어 `kiwoomcli`/`hermes` not found가 납니다
   (8.5 가이드의 `export PATH="$HOME/.local/bin:$PATH"` 경고와 같은 원인).
-- 공식 Hermes 이미지처럼 `HERMES_HOME`이 `~/.hermes`가 아닌 곳(예: `/opt/data`)으로 잡혀 있으면,
-  가이드의 `~/.hermes/workspace/...` 경로를 **실제 경로로 바꿔** 씁니다.
-  `echo $HERMES_HOME`으로 먼저 확인하세요. 8.5 council 레지스트리도 `$HERMES_HOME/.council`에 생깁니다.
+- `HERMES_HOME`이 `~/.hermes`가 아니면(운영 가이드 3장에서 확인) 가이드의 `~/.hermes/workspace/...` 경로를
+  실제 경로로 바꿔 씁니다. 8.5 council 레지스트리도 `$HERMES_HOME/.council`에 생깁니다.
+- 프로필은 `hermes profile use`로 전환하지 말고 `hermes -p <프로필>`(= `hp <프로필>`)로 부릅니다.
 
 ### 0-2. 컨테이너를 재생성해도 남아야 하는 것 (볼륨)
 
