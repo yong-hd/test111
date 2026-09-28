@@ -135,6 +135,27 @@ hermes -p sam config 2>&1 | grep -i timezone      # Timezone: Asia/Seoul
 적용은 호스트에서 `docker restart "$HC"`. 크론을 쓰는 다른 프로필(Ada 품질 카드 등)에도 필요하면 같은 줄을 추가합니다.
 크론 등록 후 "다음 실행 시각"이 KST인지 최종 확인합니다. `date`는 계속 UTC로 나오는 게 정상입니다.
 
+### 3-2b. 8장 프로필 작업 폴더(cwd) — 변경 완료 2026-09-28
+
+sam·ada·oliver의 `terminal.cwd`가 예전 홈(`/opt/data/.hermes/profiles/<이름>/workspace`)으로 고정되어 있어,
+강의 요청문의 상대경로(`artifacts/…`, `scripts/…`)가 엉뚱한 폴더를 가리켰습니다. 8장 동안 스타터로 바꿨습니다.
+기존 폴더의 파일(ada의 메모·복구 스크립트, oliver의 `company/`)은 그대로 남아 있습니다.
+
+```bash
+# 컨테이너 안, hermes 사용자
+LAB=/opt/data/.hermes/workspace/magma-finance-lab
+for p in sam ada oliver; do
+  f=/opt/data/profiles/$p/config.yaml
+  cp "$f" "$f.bak-cwd-$(date +%Y%m%d-%H%M%S)"
+  sed -i "s#^  cwd: /opt/data/.hermes/profiles/$p/workspace\$#  cwd: $LAB#" "$f"
+done
+grep -n "^  cwd:" /opt/data/profiles/{sam,ada,oliver}/config.yaml
+```
+
+- noah(8.4)·sophie(8.5)도 해당 유닛 시작 전에 같은 방식으로 확인합니다.
+- 되돌리기: `/opt/data/profiles/<이름>/config.yaml.bak-cwd-<날짜>`를 `config.yaml`로 복사.
+- 게이트웨이(메신저·카드)에 반영하려면 호스트에서 `docker restart "$HC"` 후 30초 대기.
+
 ### 3-3. 점검 중 함께 보인 경고 (강의 전 정리 권장)
 
 - **텔레그램 토큰 중복:** `default`와 `sophie`가 같은 `TELEGRAM_BOT_TOKEN`을 가지고 있어, 한쪽 어댑터는 쉬고 있습니다.
