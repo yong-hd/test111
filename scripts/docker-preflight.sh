@@ -7,7 +7,7 @@
 set -u
 
 C="${HERMES_CONTAINER:-${HC:-$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1)}}"
-U="${HERMES_USER:-}"
+U="${HERMES_USER:-hermes}"   # 게이트웨이 실행 사용자
 PROFILE="${KIWOOM_PROFILE:-모의계좌}"
 
 ok()   { printf '  [OK]   %s\n' "$*"; }
@@ -56,16 +56,19 @@ done
 echo "== 4. 게이트웨이 (칸반 디스패치·슬랙·council 필수)"
 GW="$(x 'hermes gateway status' 2>&1 | head -20)"
 printf '%s\n' "$GW" | sed 's/^/    /'
-GWPID="$(x 'pgrep -f "gateway" | head -1' 2>/dev/null)"
+# 실제 게이트웨이 PID는 status 출력에서 (pgrep는 root s6 래퍼를 먼저 잡음)
+GWPID="$(printf '%s\n' "$GW" | sed -n 's/.*PID \([0-9]\+\).*/\1/p' | head -1)"
 if [ -n "$GWPID" ]; then
-  ok "게이트웨이 프로세스 PID $GWPID"
-  # 게이트웨이/크론 프로세스가 Keyring(Secret Service)에 닿는지: DBus 주소와 TZ 존재 여부만 확인
+  GWU="$(x "ps -o user= -p $GWPID" 2>/dev/null | tr -d ' ')"
+  ok "게이트웨이 PID $GWPID, 실행 사용자 ${GWU:-?}"
+  [ -n "$GWU" ] && [ -n "$U" ] && [ "$GWU" != "$U" ] && warn "점검 사용자($U)와 게이트웨이 사용자($GWU)가 다름 — HERMES_USER=$GWU 로 다시 실행"
+  # 게이트웨이 환경의 TZ (같은 사용자일 때만 /proc/<pid>/environ 읽기 가능)
   GENV="$(x "tr '\0' '\n' < /proc/$GWPID/environ" 2>/dev/null)"
-  if printf '%s\n' "$GENV" | grep -q '^DBUS_SESSION_BUS_ADDRESS='; then ok "게이트웨이 환경에 DBUS_SESSION_BUS_ADDRESS 있음"
-  else warn "게이트웨이 환경에 DBUS_SESSION_BUS_ADDRESS 없음 — 카드/크론에서 kiwoomcli가 Keyring을 못 찾을 수 있음 (런북 0-3 참고)"; fi
-  printf '%s\n' "$GENV" | grep -q '^TZ=' && ok "게이트웨이 $(printf '%s\n' "$GENV" | grep '^TZ=')" || warn "게이트웨이 환경에 TZ 미설정"
+  if [ -n "$GENV" ]; then
+    printf '%s\n' "$GENV" | grep -q '^TZ=' && ok "게이트웨이 $(printf '%s\n' "$GENV" | grep '^TZ=')" || warn "게이트웨이 환경에 TZ 미설정 (운영 가이드 3-2)"
+  fi
 else
-  warn "pgrep로 게이트웨이 프로세스를 찾지 못함 — 위 status 출력으로 판단 (멈춰 있으면 카드가 ready에서 멈춤). Keyring·TZ 환경 확인은 건너뜀"
+  warn "status 출력에서 게이트웨이 PID를 찾지 못함 — 위 status 출력으로 판단 (멈춰 있으면 카드가 ready에서 멈춤). TZ 환경 확인은 건너뜀"
 fi
 
 echo "== 5. 키움 모의계좌 인증 (지정 항목만)"
@@ -73,9 +76,14 @@ x "kiwoomcli auth status --profile '$PROFILE'" 2>&1 \
   | grep -E '계좌 별칭|모드|자격 증명 존재|자격 증명 출처|토큰 유효|지금 API 호출 가능' \
   | sed 's/^/    /' || fail "auth status 실패"
 
+echo "== 5b. 키움 파일 소유자 (게이트웨이 사용자가 읽을 수 있어야 함)"
+x 'ls -ld ~/.local/share/python_keyring ~/.local/share/python_keyring/* ~/.config/kiwoom ~/.cache/kiwoom 2>&1' | sed 's/^/    /'
+BAD="$(x 'find ~/.local/share/python_keyring ~/.config/kiwoom ~/.cache/kiwoom ~/.config/python_keyring ! -user "$(id -un)" 2>/dev/null | head -5')"
+[ -z "$BAD" ] && ok "모두 $(x 'id -un') 소유" || warn "다른 사용자 소유 파일 있음 → 컨테이너 root 셸에서 chown -R hermes:hermes (8.1 보완 문서 7)"
+
 echo "== 6. 작업 폴더"
-W="$HH/workspace"
-x "test -d '$W'" || { x "test -d '$CHOME/.hermes/workspace'" && W="$CHOME/.hermes/workspace"; }
+W="$CHOME/.hermes/workspace"   # 강의 경로 (이 VPS: /opt/data/.hermes/workspace)
+x "test -d '$W'" || W="$HH/workspace"
 echo "  workspace: $W"
 for d in magma-finance-lab vibe-finance-kit; do
   if x "test -d '$W/$d'"; then ok "$W/$d"; else warn "$W/$d 없음"; fi

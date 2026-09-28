@@ -17,11 +17,11 @@ Docker 기준으로 다시 정리합니다. 프롬프트 원문은 `magma-financ
 
 ```bash
 source scripts/hermes-env.sh     # VPS 호스트에서, HC 자동 설정
-hsh                              # = docker exec -it "$HC" bash -l
+hsh                              # = docker exec -it -u hermes "$HC" bash -l
 cd ~/.hermes/workspace/magma-finance-lab
 ```
 
-- `-u`를 붙이지 않습니다. `docker exec "$HC" hermes …`가 동작하는 기본 사용자(root)가 Hermes 데이터와 키움 자격 증명의 주인입니다.
+- **`-u hermes`로 들어갑니다**(`hsh`가 그렇게 함). 게이트웨이·카드·크론이 `hermes` 사용자로 돌기 때문에, root로 만든 파일은 그쪽에서 못 읽거나 못 쓸 수 있습니다.
 - `bash -l`을 빼면 `~/.local/bin`이 PATH에 없어 `kiwoomcli`/`hermes` not found가 납니다
   (8.5 가이드의 `export PATH="$HOME/.local/bin:$PATH"` 경고와 같은 원인).
 - `HERMES_HOME`이 `~/.hermes`가 아니면(운영 가이드 3장에서 확인) 가이드의 `~/.hermes/workspace/...` 경로를

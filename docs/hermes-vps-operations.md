@@ -21,14 +21,16 @@
 
 | 항목 | 값 | 의미 |
 | --- | --- | --- |
-| 컨테이너 기본 사용자 | `root` | `docker exec`에 `-u` 불필요 |
+| 컨테이너 기본 사용자 | `root` | `docker exec` 기본값. **작업은 `-u hermes`로** |
+| 게이트웨이 실행 사용자 | `hermes` (uid 10000, HOME `/opt/data`) | s6가 root로 띄운 뒤 hermes로 낮춰 실행 |
 | 컨테이너 `HOME` | `/opt/data` | `~` = `/opt/data` |
 | `HERMES_HOME` | `/opt/data` | 프로필·칸반·크론·스킬 전부 여기 |
 | 볼륨 | `/docker/hermes-agent-yx1l/data -> /opt/data` | HOME 전체가 영속 — `~/.local`, keyring 파일 포함 |
 | 시간대 | `UTC +0000` | **KST 아님** → 3-2 |
 | `hermes` | `/opt/data/.local/bin/hermes` | 영속 |
 | `uv` | `/usr/local/bin/uv` | 이미지에 포함 |
-| `kiwoomcli` | **없음** | → [8.1 보완 문서](./8.1-kiwoomcli-in-container.md) |
+| `kiwoomcli` | `/opt/data/.local/bin/kiwoomcli` (kwcli 1.0.3) | 2026-09-28 설치, demo·모의계좌 인증 통과 (root·hermes 모두) |
+| 강의 작업 폴더 | `/opt/data/.hermes/workspace/magma-finance-lab` | = 강의 경로 `~/.hermes/workspace/...` 그대로 |
 | 프로필 | ada, ethan, iris, mia, noah, oliver, sam, sophie | 강의 5명 모두 있음 |
 | 게이트웨이 | default 프로필 멀티플렉서, 실행 중 | 모든 프로필 카드·크론을 이것이 처리 |
 
@@ -63,16 +65,22 @@ source /path/to/test111/scripts/hermes-env.sh
 | `hlogs [줄수]` | 컨테이너 로그 따라보기 | `hlogs 300` |
 | `hpre` | 읽기 전용 점검 (`docker-preflight.sh`) | `hpre` |
 
-도우미 없이 쓸 때의 원형은 지금 쓰시는 그대로입니다.
+도우미 없이 쓸 때의 원형:
 
 ```bash
+# 호스트 (root@srv1840967)
 export HC=$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1)
-docker exec -it "$HC" bash -l
+docker exec -it -u hermes "$HC" bash -l      # 프롬프트: hermes@<컨테이너ID>
 ```
 
-규칙 두 가지:
-- **`-u`를 붙이지 않습니다.** 지금 `docker exec "$HC" hermes …`가 동작하는 기본 사용자가 Hermes·Keyring·
-  `kiwoomcli`의 주인입니다. `-u root` 등으로 들어가면 다른 HOME을 보게 됩니다.
+규칙:
+- **프롬프트로 위치를 구분합니다.** `root@srv1840967` = 호스트(`docker` 명령 가능), `…@e7788d11a4f7` 같은
+  컨테이너 ID = 컨테이너 안(`docker` 명령 없음). 호스트용 명령을 컨테이너 안에서 치면 `No such container`가 납니다.
+- **작업은 `-u hermes`로.** 게이트웨이(메신저·칸반 카드·크론)가 `hermes` 사용자로 돕니다. root로
+  `kiwoomcli`·`git`·파일 생성을 하면 root 소유 파일이 생겨 게이트웨이가 못 읽거나 못 씁니다.
+  root가 필요한 건 `chown`, 패키지 설치 같은 관리 작업뿐입니다.
+- **root로 만든 파일이 생겼다면** 컨테이너 안 root 셸에서 `chown -R hermes:hermes <경로>`로 돌려놓습니다.
+- **여러 줄을 붙여 넣을 때** 첫 줄이 `docker exec -it … bash -l`이면 나머지 줄은 버려집니다. 셸에 들어간 뒤 붙여 넣습니다.
 - **대화형 명령은 `-it`** (`kiwoomcli setup`, `setup_hermes.py`의 Y/N 질문, `hermes -p sam` 채팅).
 
 ---
@@ -99,25 +107,17 @@ hpre
 
 ---
 
-### 3-1. 강의 경로 `~/.hermes/workspace` 맞추기
+### 3-1. 강의 경로 `~/.hermes/workspace` — 이미 맞음
 
-강의 문서와 스크립트는 `~/.hermes/workspace/magma-finance-lab`을 기준으로 씁니다
-(`setup_hermes.py`의 설치 영수증 경로도 `~/.hermes/workspace/...`로 고정).
-이 컨테이너에서 `~`는 `/opt/data`이므로 그 경로는 `/opt/data/.hermes/workspace`가 되고,
-Hermes 자체의 workspace(`/opt/data/workspace`)와 **다른 폴더**입니다. 한쪽으로 모읍니다.
+강의 문서와 스크립트는 `~/.hermes/workspace/magma-finance-lab`을 기준으로 씁니다.
+이 컨테이너에서 `~` = `/opt/data`이고, `/opt/data/.hermes/workspace/magma-finance-lab`에 8.1에서 clone한
+스타터가 있습니다(2026-09-28 확인). **강의 경로 그대로 쓰면 되고 링크를 만들 필요가 없습니다.**
 
-```bash
-docker exec "$HC" bash -lc 'ls -la /opt/data/.hermes 2>&1; ls /opt/data/workspace'
-```
-
-- `/opt/data/.hermes`가 **없으면** (권장):
-  ```bash
-  docker exec "$HC" bash -lc 'mkdir -p /opt/data/.hermes && ln -s /opt/data/workspace /opt/data/.hermes/workspace && ls -la /opt/data/.hermes'
-  ```
-  이제 `~/.hermes/workspace/magma-finance-lab` = `/opt/data/workspace/magma-finance-lab`. 강의 프롬프트를 고치지 않아도 됩니다.
-- **이미 있으면** 무엇이 들어 있는지 보고 결정합니다(8.1에서 그쪽에 clone했을 수 있음). 덮어쓰지 마세요.
-
-`/opt/data/.hermes` 전체를 `/opt/data`로 링크하지 않습니다(자기 자신을 가리키는 순환 링크가 되어 백업·검색 도구가 꼬입니다).
+- `/opt/data/.hermes`의 나머지(`.env`, `config.yaml`, `kanban.db` …)는 6~7월에 쓰던 **예전 Hermes 홈**입니다.
+  건드리거나 지우지 않고, `HERMES_HOME`을 그쪽으로 바꾸지 않습니다. 특히 `.env`에는 예전 비밀값이 있을 수 있습니다.
+- 현재 Hermes 본체(프로필·칸반·크론)는 `HERMES_HOME=/opt/data`입니다. 칸반 카드는 강의대로 workdir을
+  `$HOME/.hermes/workspace/magma-finance-lab`(= 위 경로)로 고정하므로 서로 섞이지 않습니다.
+- `/opt/data/workspace`는 비어 있으며 쓰지 않습니다.
 
 ### 3-2. 시간대를 KST로
 
