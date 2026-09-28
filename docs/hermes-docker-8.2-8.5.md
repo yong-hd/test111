@@ -21,7 +21,7 @@ hsh                              # = docker exec -it "$HC" bash -l
 cd ~/.hermes/workspace/magma-finance-lab
 ```
 
-- `-u`를 붙이지 않습니다. `docker exec "$HC" hermes …`가 동작하는 기본 사용자가 8.1의 `kiwoomcli setup`·Keyring 주인입니다.
+- `-u`를 붙이지 않습니다. `docker exec "$HC" hermes …`가 동작하는 기본 사용자(root)가 Hermes 데이터와 키움 자격 증명의 주인입니다.
 - `bash -l`을 빼면 `~/.local/bin`이 PATH에 없어 `kiwoomcli`/`hermes` not found가 납니다
   (8.5 가이드의 `export PATH="$HOME/.local/bin:$PATH"` 경고와 같은 원인).
 - `HERMES_HOME`이 `~/.hermes`가 아니면(운영 가이드 3장에서 확인) 가이드의 `~/.hermes/workspace/...` 경로를
@@ -40,24 +40,19 @@ cd ~/.hermes/workspace/magma-finance-lab
 `docker compose up -d`로 이미지만 갱신해도 컨테이너는 재생성됩니다. `scripts/docker-preflight.sh`의
 1번 항목이 이 네 경로가 볼륨 안에 있는지 확인합니다.
 
-### 0-3. Keyring은 "대화형 셸에서 되면 끝"이 아니다 ⚠️ 가장 흔한 함정
+### 0-3. 키움 자격 증명은 컨테이너 안, 볼륨 위에
 
-8.1에서 `gnome-keyring-daemon --unlock` 후 `kiwoomcli auth status`가 통과했더라도, 그건 **그 exec 셸의
-DBus 세션**에서만 확인된 것입니다. 8.2의 칸반 카드 워커, 8.2·8.4의 크론, 슬랙으로 부른 Sam은
-**게이트웨이 프로세스**에서 돌기 때문에 다른 환경을 봅니다.
+이 VPS 컨테이너에는 OS Keyring(DBus·GNOME Keyring)이 없어 강의 방식의 `kiwoomcli setup`이 그대로는 멈춥니다.
+**[8.1 보완 문서](./8.1-kiwoomcli-in-container.md)** 대로 `keyrings.alt` 파일 백엔드를 `/opt/data`에 설정하면,
+설정 파일이 HOME(`/opt/data`) 기준이라 터미널·게이트웨이·카드·크론 모두 같은 저장소를 보고,
+컨테이너가 재시작되어도 unlock할 필요가 없습니다(모의계좌 전용).
 
-확인 방법(8.2 카드를 만들기 전에 한 번):
+8.2 카드를 만들기 전 확인:
+1. 컨테이너 셸에서 `kiwoomcli auth status --profile 모의계좌` 통과
+2. **메신저에서 Sam에게** 강의 8.1의 읽기 전용 preflight 프롬프트 → 같은 값
+   (카드·크론·메신저는 게이트웨이 프로세스에서 돌기 때문)
 
-1. `scripts/docker-preflight.sh`의 4번 항목에서 게이트웨이 환경에 `DBUS_SESSION_BUS_ADDRESS`가 있는지 봅니다.
-2. 슬랙(또는 게이트웨이를 거치는 채널)에서 Sam에게 8.1의 읽기 전용 preflight 프롬프트를 한 번 더 보냅니다.
-   `자격 증명 출처: 운영체제 자격 증명 저장소`, `지금 API 호출 가능: 예`가 나와야 합니다.
-
-막히면:
-- 게이트웨이를 **Keyring을 연 같은 DBus 세션 안에서** 띄우도록 컨테이너 엔트리포인트를 구성합니다
-  (예: `dbus-run-session -- bash -c 'eval "$(gnome-keyring-daemon --start --components=secrets)"; ... ; hermes gateway start'`).
-- 컨테이너가 재시작되면 Keyring은 다시 잠깁니다. 재시작 후에는 unlock → 게이트웨이 재기동 순서로 복구합니다.
-- 강의 저장소 규칙대로 **`.env`에 키를 넣어 우회하지 않습니다**
-  (`broker/README.md`: "자격 증명 저장소 사용 불가가 나오면 .env로 우회하지 말고 중단").
+강의 저장소 규칙대로 `.env`에 키를 넣어 우회하지 않습니다.
 
 ### 0-4. 시간대와 대시보드 접근
 
@@ -104,7 +99,7 @@ HERMES_CONTAINER=<컨테이너> HERMES_USER=<사용자> ./scripts/docker-preflig
    - Supabase MCP OAuth가 7.1에서 호스트 브라우저 기준으로 붙어 있었다면, 컨테이너 안 Ada에서도
      연결되는지 먼저 "프로젝트 이름과 ref만 확인" 프롬프트로 봅니다.
 6. **칸반 카드** — 보드 생성(workdir 고정) → Sam 수집 / Oliver 조사 → Ada 품질 검증(dependency).
-   - 카드 전에 **0-3 Keyring 확인을 끝내 둡니다.** Sam 수집 카드가 인증 오류로만 끝나면 이 문제입니다.
+   - 카드 전에 **0-3 키움 자격 증명 확인을 끝내 둡니다.** Sam 수집 카드가 인증 오류로만 끝나면 이 문제입니다.
    - 대시보드에서 카드를 만들 때 workspace는 `dir`.
 7. **적재 승인 댓글** → ready → dispatch → 콘솔에서 `finance.daily_prices` 확인.
 8. **분석 스냅샷 카드** → `/clear` 후 새 세션 독립 검증
@@ -137,11 +132,9 @@ Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치
 7. `@Sam 판단 루프를 평일 아침 8시 40분에 예약해줘` → **다음 실행 시각의 시간대 확인**
 
 Docker 주의:
-- 슬랙 이벤트를 받는 것도, 크론이 도는 것도 게이트웨이입니다. 컨테이너 재시작 → Keyring 잠김 →
-  08:40 기안 단계나 승인 후 집행 단계에서 키움 인증 실패로 멈출 수 있습니다.
-  루프 규칙상 "재시도하지 않고 보고하고 멈춤"이므로 주문이 잘못 나가지는 않지만,
-  운영을 계속할 계획이라면 재시작 후 복구 절차(0-3)를 습관으로 둡니다.
-- `restart: unless-stopped`여도 Keyring unlock은 자동이 아닙니다.
+- 슬랙 이벤트를 받는 것도, 크론이 도는 것도 게이트웨이입니다. 컨테이너 재시작 뒤에는
+  [운영 가이드](./hermes-vps-operations.md) 5장 "재시작 뒤 체크리스트"로 게이트웨이·`kiwoomcli auth status`·크론 시간대를 확인합니다.
+  인증이 실패해도 루프 규칙상 "재시도하지 않고 보고하고 멈춤"이라 주문이 잘못 나가지는 않습니다.
 
 ## 8.5 투자위원회 (Docker 순서)
 
@@ -172,8 +165,8 @@ hermes -p sophie council doctor      # 플러그인·게이트웨이·칸반·�
 
 | 증상 | Docker에서의 원인 | 조치 |
 | --- | --- | --- |
-| 터미널에선 되는데 카드/크론/슬랙 Sam만 키움 인증 실패 | 게이트웨이가 Keyring DBus 세션 밖 | 0-3 |
-| 컨테이너 재시작 뒤 전부 인증 실패 | Keyring 다시 잠김 | unlock → 게이트웨이 재기동 |
+| 터미널에선 되는데 카드/크론/슬랙 Sam만 키움 인증 실패 | keyring 설정 파일이 HOME 밖이거나 백엔드 미설정 | 0-3, 8.1 보완 문서 |
+| `kiwoomcli setup`이 keyring 백엔드 오류로 멈춤 | 컨테이너에 OS Keyring 없음 | 8.1 보완 문서 |
 | 이미지 갱신 뒤 `kiwoomcli` 없음 | `~/.local`이 볼륨 밖 | 0-2 |
 | Ada MCP `vibe-finance-kit` 연결 실패 | `.venv` 절대경로 유실 | 볼륨 확인 후 `setup_hermes.py` 재실행 |
 | 크론이 9시간 어긋나 실행 | 컨테이너 TZ=UTC | 0-4 |

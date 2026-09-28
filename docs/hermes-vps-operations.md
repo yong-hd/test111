@@ -17,10 +17,24 @@
 | 컨테이너 | `hermes-agent-yx1l-hermes-agent-1` | 재생성 시 이름 유지, 스크립트는 자동 탐지 |
 | 포트 | `0.0.0.0:32773 → 4860` | **공인 IP에 공개**됨 (7장) |
 
-3장 "처음 한 번" 결과로 아래 칸을 채워 두세요.
+2026-09-28 점검 결과:
 
-| 항목 | 값 |
-| --- | --- |
+| 항목 | 값 | 의미 |
+| --- | --- | --- |
+| 컨테이너 기본 사용자 | `root` | `docker exec`에 `-u` 불필요 |
+| 컨테이너 `HOME` | `/opt/data` | `~` = `/opt/data` |
+| `HERMES_HOME` | `/opt/data` | 프로필·칸반·크론·스킬 전부 여기 |
+| 볼륨 | `/docker/hermes-agent-yx1l/data -> /opt/data` | HOME 전체가 영속 — `~/.local`, keyring 파일 포함 |
+| 시간대 | `UTC +0000` | **KST 아님** → 3-2 |
+| `hermes` | `/opt/data/.local/bin/hermes` | 영속 |
+| `uv` | `/usr/local/bin/uv` | 이미지에 포함 |
+| `kiwoomcli` | **없음** | → [8.1 보완 문서](./8.1-kiwoomcli-in-container.md) |
+| 프로필 | ada, ethan, iris, mia, noah, oliver, sam, sophie | 강의 5명 모두 있음 |
+| 게이트웨이 | default 프로필 멀티플렉서, 실행 중 | 모든 프로필 카드·크론을 이것이 처리 |
+
+호스트 ↔ 컨테이너 경로는 1:1입니다: `/docker/hermes-agent-yx1l/data/X` = 컨테이너 `/opt/data/X`.
+
+--- | --- |
 | 컨테이너 기본 사용자 (`whoami`) | |
 | 컨테이너 `HOME` | |
 | `HERMES_HOME` | |
@@ -85,6 +99,62 @@ hpre
 
 ---
 
+### 3-1. 강의 경로 `~/.hermes/workspace` 맞추기
+
+강의 문서와 스크립트는 `~/.hermes/workspace/magma-finance-lab`을 기준으로 씁니다
+(`setup_hermes.py`의 설치 영수증 경로도 `~/.hermes/workspace/...`로 고정).
+이 컨테이너에서 `~`는 `/opt/data`이므로 그 경로는 `/opt/data/.hermes/workspace`가 되고,
+Hermes 자체의 workspace(`/opt/data/workspace`)와 **다른 폴더**입니다. 한쪽으로 모읍니다.
+
+```bash
+docker exec "$HC" bash -lc 'ls -la /opt/data/.hermes 2>&1; ls /opt/data/workspace'
+```
+
+- `/opt/data/.hermes`가 **없으면** (권장):
+  ```bash
+  docker exec "$HC" bash -lc 'mkdir -p /opt/data/.hermes && ln -s /opt/data/workspace /opt/data/.hermes/workspace && ls -la /opt/data/.hermes'
+  ```
+  이제 `~/.hermes/workspace/magma-finance-lab` = `/opt/data/workspace/magma-finance-lab`. 강의 프롬프트를 고치지 않아도 됩니다.
+- **이미 있으면** 무엇이 들어 있는지 보고 결정합니다(8.1에서 그쪽에 clone했을 수 있음). 덮어쓰지 마세요.
+
+`/opt/data/.hermes` 전체를 `/opt/data`로 링크하지 않습니다(자기 자신을 가리키는 순환 링크가 되어 백업·검색 도구가 꼬입니다).
+
+### 3-2. 시간대를 KST로
+
+컨테이너가 UTC라서 8.2의 평일 18:30 수집, 8.4의 평일 08:40 판단 크론이 어긋날 수 있습니다.
+
+```bash
+docker exec "$HC" bash -lc 'ls /usr/share/zoneinfo/Asia/Seoul && TZ=Asia/Seoul date'
+```
+
+KST 시각이 나오면 `/docker/hermes-agent-yx1l/docker-compose.yml`의 hermes-agent 서비스에 추가합니다.
+
+```yaml
+    environment:
+      - TZ=Asia/Seoul
+```
+
+```bash
+cd /docker/hermes-agent-yx1l
+tar czf /root/hermes-data-$(date +%Y%m%d-%H%M).tgz data docker-compose.yml   # 먼저 백업
+docker compose up -d                                                          # 재생성 (데이터는 /opt/data에 그대로)
+export HC=$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1)
+docker exec "$HC" bash -lc 'date "+%Z %z"; hermes gateway status 2>&1 | head -3'
+```
+
+이미 `environment:` 블록이 있으면 그 안에 한 줄만 추가합니다. 재생성해도 `/opt/data` 밖의 것
+(컨테이너 안에서 `apt install`한 패키지 등)만 사라지고, Hermes 데이터와 `kiwoomcli`는 남습니다.
+크론 등록 뒤에는 "다음 실행 시각"이 KST로 보이는지 확인합니다.
+
+### 3-3. 점검 중 함께 보인 경고 (강의 전 정리 권장)
+
+- **텔레그램 토큰 중복:** `default`와 `sophie`가 같은 `TELEGRAM_BOT_TOKEN`을 가지고 있어, 한쪽 어댑터는 쉬고 있습니다.
+  8.5에서 Sophie(의장)의 회의 중계가 텔레그램으로 가야 한다면 문제가 됩니다. Sophie에게 별도 봇 토큰을 주거나,
+  default의 `gateway.profile_routes`로 라우팅한 뒤 `hermes gateway migrate --multiplex`.
+  (8.4 승인 루프처럼 슬랙을 쓴다면 당장 영향은 없습니다.)
+- **`terminal.env_passthrough`가 문자열:** `config.yaml`에서 `'["BRIGHTDATA_API_KEY","BRIGHTDATA_UNLOCKER_ZONE"]'` 따옴표를 빼고
+  YAML 리스트로 바꿔야 적용됩니다. `hermes doctor`가 수정 방법을 알려 줍니다. 강의와 직접 관계는 없습니다.
+
 ## 4. 프로필
 
 ### `profile use` 대신 `-p`
@@ -135,7 +205,7 @@ hlogs 200
 
 1. `hx 'hermes gateway status'` — 게이트웨이 실행 중
 2. `hx "kiwoomcli auth status --profile 모의계좌"` — `토큰 유효`, `지금 API 호출 가능`이 `예`
-   (Keyring이 잠겼으면 8.1 방식으로 unlock → 게이트웨이 재기동)
+   (실패하면 `~/.config/python_keyring/keyringrc.cfg`가 있는지부터 — 8.1 보완 문서)
 3. 슬랙에서 Sam에게 한 줄 질문 → 응답 오는지
 4. 크론 목록에서 다음 실행 시각·시간대 확인 (8.2 18:30, 8.4 08:40)
 
