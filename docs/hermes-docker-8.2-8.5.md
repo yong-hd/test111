@@ -144,6 +144,16 @@ hermes -p ada mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=$
 - 적재 담당은 **Ada**입니다(Supabase MCP가 Ada에만 있음). Sam이 AGENTS.md 역할표를 근거로 Sam 배정을 제안하면 PROMPTS.md "4. …적재하고 검산하기 (Ada)"를 근거로 Ada로 지정합니다.
 - 수집 결과의 마지막 날짜는 **실행 시각(KST) 기준 전날**입니다. `price-history-coverage.json`의 `generated_at`으로 판단합니다.
 
+### 8.2 보충 — 매일 수집 크론 (이 VPS)
+
+- cron `b051cb7d7538`: 평일 18:30 Asia/Seoul, profile sam, workdir `/opt/data/.hermes/workspace/magma-finance-lab`
+- 명령: `python3 scripts/backfill_prices.py --pages 1 --minimum-common-bars 1 --output-dir artifacts/market-daily`
+  → 이어서 Ada 가격 품질 카드(입력 `artifacts/market-daily/`).
+- **주의:** 기본 출력(`artifacts/market/`)으로 `--pages 1`을 돌리면 스냅샷을 600봉으로 **먼저 덮어쓴 뒤**
+  2,500봉 게이트에서 실패합니다. `artifacts/market/`의 3,000봉 스냅샷은 8.3 백테스트 입력이므로 매일 크론은 별도 폴더에 씁니다.
+- 매일 수집분의 Supabase 적재는 강의 크론 범위 밖입니다(수집 + 품질 검증까지).
+- 정리: 운영을 멈출 때 Sam에게 cron ID로 삭제를 요청하고 목록에서 사라졌는지 확인.
+
 ## 8.3 백테스트 (Docker 순서)
 
 Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치는** 단계(10단계 `backtest/rules.md` 근거 칸)만 방법을 정합니다:
