@@ -125,6 +125,25 @@ hermes -p ada mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=$
   `hermes mcp add`의 인증 질문에서 `Ctrl+C`는 중단되지 않고 다음 질문(토큰)으로 넘어가므로, 실수했으면 끝까지 가서 `Save config anyway? → N` 후 `.env`의 `MCP_SUPABASE_API_KEY` 줄을 지웁니다.
 - 폐기: Supabase 콘솔 Access Tokens에서 해당 토큰 Revoke.
 
+### 8.2 보충 — 칸반 진행 기록 (이 VPS, 2026-09-29~30)
+
+보드 `asset-management-market-data`, workdir `/opt/data/.hermes/workspace/magma-finance-lab`(dir).
+
+| 카드 | 담당 | 결과 |
+|---|---|---|
+| t_77df475a 수집 | sam | 종목별 3,000봉, 2014-07-08~2026-09-29, 공통 3,000, gate_passed |
+| t_875ee2ca 조사 | oliver | 추적오차·괴리율·TIGER 순자산·KOSPI200 PER/PBR 등 7개 null(공식 사이트 403/Service unavailable) |
+| t_937b10a4 품질 | ada | 5개 항목 PASS |
+| t_7ebe10e3 적재 | ada | daily_prices 6,000행 적재·재검산 0건 |
+
+이 버전의 Hermes에서 달라진 점:
+- **강의 요청문의 `$HOME/...` 경로는 쓰지 않습니다.** 에이전트 터미널의 `$HOME`은 프로필 전용 폴더라 workdir이 엉뚱해집니다. 절대경로를 씁니다.
+- **새 보드를 만든 세션은 옛 보드에 고정**(`HERMES_KANBAN_BOARD`)되어 있을 수 있습니다. 카드는 새 세션에서, 보드 slug를 명시해 만듭니다.
+- **workspace 방식은 카드마다 `workspace_kind=dir`로 명시**합니다(보드 기본 workdir은 경로만 정함).
+- **done 카드는 재실행되지 않습니다.** 강의처럼 품질 카드에 "대표 적재 승인" 댓글을 달아도 적재가 시작되지 않으므로, 품질 카드에 의존하는 **Ada 적재 카드를 새로** 만들어 승인 댓글 후 dispatch했습니다.
+- 적재 담당은 **Ada**입니다(Supabase MCP가 Ada에만 있음). Sam이 AGENTS.md 역할표를 근거로 Sam 배정을 제안하면 PROMPTS.md "4. …적재하고 검산하기 (Ada)"를 근거로 Ada로 지정합니다.
+- 수집 결과의 마지막 날짜는 **실행 시각(KST) 기준 전날**입니다. `price-history-coverage.json`의 `generated_at`으로 판단합니다.
+
 ## 8.3 백테스트 (Docker 순서)
 
 Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치는** 단계(10단계 `backtest/rules.md` 근거 칸)만 방법을 정합니다:
