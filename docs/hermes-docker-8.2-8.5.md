@@ -210,6 +210,12 @@ Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치
   `hermes -p default send -t telegram:-5582644225 "…"`로 보냅니다(같은 봇이라 그룹에서는 동일하게 보임). SOUL 규칙에 이 명령을 적습니다.
 - **Sam에도 Supabase MCP 연결:** 판단 루프 2번(`finance.orders`에 drafted 기록)을 Sam이 하므로 Ada와 같은 프로젝트·기능 범위로 추가.
   토큰은 `grep '^MCP_SUPABASE_API_KEY=' ada/.env >> sam/.env` 로 화면 출력 없이 복사 후 `hermes -p sam mcp add supabase … --auth header`.
+- **준비 점검 결과(2026-09-30):** Sam preflight 통과(limits confirmed·템플릿 존재) · Ada 주문 도구 없음(분석·Supabase만) · Noah 주문·DB 도구 없음
+  · `TZ=Asia/Seoul python3 broker/decide.py --dry-run` → 2026-09-30, 109,545원, 보유 0 → BUY 1주(판단 파일 미생성).
+- **실행은 장중에:** 장 마감 후에도 당일 종가로 판단이 나오지만 승인 후 집행은 장중이어야 하고 승인 만료가 약 10분입니다.
+  드라이런 없이 한 번 돌리면 그날 판정 기록이 생겨 재기안이 막힙니다.
+- **격리 한계:** kiwoomcli와 키 파일이 같은 `hermes` 사용자 소유라 Ada·Noah 터미널에서도 기술적으로는 닿을 수 있습니다(강의 PROMPTS 8.1-5와 같은 한계).
+  PATH·스킬·SOUL·승인 카드로 역할을 나누며, 그래서 모의계좌만 씁니다.
 - noah의 `terminal.cwd`도 magma-finance-lab으로 변경(sam·ada·oliver와 동일, 백업 `.bak-cwd-*`).
 
 
