@@ -2,6 +2,7 @@
 
 - `docs/hermes-vps-operations.md` — 이 VPS(Hostinger `hvps-hermes-agent`) 운영 기준: 접속·프로필·재시작·백업·보안
 - `docs/8.1-kiwoomcli-in-container.md` — 컨테이너(root·화면 없음)에 키움 CLI와 자격 증명 저장소 설치 (8.1 보완)
+- `docs/8.4-sam-soul-rules.md` — 8.4 Sam SOUL 규칙(텔레그램 FAT 그룹·TZ 보정판)
 - `docs/hermes-docker-8.2-8.5.md` — 강의 가이드를 Docker 컨테이너에서 진행할 때 달라지는 점과 유닛별 순서
 - `scripts/hermes-env.sh` — 호스트에서 `source`하면 `HC`와 도우미(`hsh`·`hx`·`hp`·`hlogs`·`hpre`) 설정
 - `scripts/docker-preflight.sh` — VPS 호스트에서 실행하는 읽기 전용 점검 (볼륨·시간대·PATH·게이트웨이·Keyring·limits.md)
