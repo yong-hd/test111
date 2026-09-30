@@ -188,6 +188,27 @@ Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치
 
 ## 8.4 아침 주문 루프 (Docker 순서)
 
+### 8.4 준비 — 메신저에서 Sam 부르기 (이 VPS: 텔레그램 FAT 그룹, 2026-09-30)
+
+강의의 슬랙 `@Sam` 대신 **텔레그램 그룹 FAT**(`chat_id -5582644225`)을 Sam으로 라우팅했습니다. 봇은 기존 기본 프로필 봇(`@DyonHermes_Bot`) 그대로입니다.
+
+```yaml
+# /opt/data/config.yaml (기본 프로필) — profile_routes 아래
+  - name: telegram-fat-to-sam
+    platform: telegram
+    chat_id: "-5582644225"
+    profile: sam
+```
+
+- 그룹 ID 찾기: 그룹에서 봇을 멘션해 한 번 보낸 뒤 `/opt/data/channel_directory.json` 또는 `logs/gateway*.log`의 `chat=-…`.
+- 적용: 호스트에서 `docker restart "$HC"` 후 **60초 이상** 대기(40초에는 아직 not running일 수 있음).
+- 확인: FAT에서 `@DyonHermes_Bot … echo "HERMES_HOME=$HERMES_HOME"` → `/opt/data/profiles/sam` ✓
+- 그룹에서는 봇을 **멘션**해야 메시지를 받습니다(텔레그램 봇 기본 privacy). 강의의 `@Sam 승인` → `@DyonHermes_Bot 승인`.
+- 개인 DM과 다른 그룹(DyonHermesBot)은 기존대로 기본 프로필이 받습니다.
+- 되돌리기: `/opt/data/config.yaml.bak-route-<날짜>` 복원 후 재시작.
+- noah의 `terminal.cwd`도 magma-finance-lab으로 변경(sam·ada·oliver와 동일, 백업 `.bak-cwd-*`).
+
+
 1. `git pull --ff-only` — 8.3에서 rules.md를 직접 고쳤다면 **중단되는 게 정상**. 가이드 1단계의 병합 위임 프롬프트를 Sam에게.
 2. **pull이 끝난 뒤** `guardrails/limits.md` 값을 검토하고 `status: confirmed`를 사람이 직접 저장
    (순서가 바뀌면 pull이 또 충돌).
