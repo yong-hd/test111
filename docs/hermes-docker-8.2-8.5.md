@@ -206,6 +206,10 @@ Docker 고유 이슈는 거의 없습니다. 파일을 **사람이 직접 고치
 - 그룹에서는 봇을 **멘션**해야 메시지를 받습니다(텔레그램 봇 기본 privacy). 강의의 `@Sam 승인` → `@DyonHermes_Bot 승인`.
 - 개인 DM과 다른 그룹(DyonHermesBot)은 기존대로 기본 프로필이 받습니다.
 - 되돌리기: `/opt/data/config.yaml.bak-route-<날짜>` 복원 후 재시작.
+- **승인 요청 전송:** `hermes -p sam send`는 Sam 프로필에 텔레그램 토큰이 없어 실패합니다.
+  `hermes -p default send -t telegram:-5582644225 "…"`로 보냅니다(같은 봇이라 그룹에서는 동일하게 보임). SOUL 규칙에 이 명령을 적습니다.
+- **Sam에도 Supabase MCP 연결:** 판단 루프 2번(`finance.orders`에 drafted 기록)을 Sam이 하므로 Ada와 같은 프로젝트·기능 범위로 추가.
+  토큰은 `grep '^MCP_SUPABASE_API_KEY=' ada/.env >> sam/.env` 로 화면 출력 없이 복사 후 `hermes -p sam mcp add supabase … --auth header`.
 - noah의 `terminal.cwd`도 magma-finance-lab으로 변경(sam·ada·oliver와 동일, 백업 `.bak-cwd-*`).
 
 
