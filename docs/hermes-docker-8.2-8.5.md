@@ -300,7 +300,7 @@ hermes -p sophie council doctor      # 플러그인·게이트웨이·칸반·�
 | 기준 문서 | `reports/council/kodex200-dca-review/00-최종결정.md` (회의 산출물 4종보다 우선) |
 | 08:40 판단 루프 `09971d8a1452` | **paused** (삭제 안 함) |
 | 18:30 수집 `b051cb7d7538` | scheduled (`artifacts/market-daily/`) |
-| Sam SOUL | 판단 루프 절 맨 위에 "보류 중 … '보류 중입니다'라고만 답한다" |
+| Sam SOUL | 판단 루프 절 맨 위에 "보류 중 … '보류 중입니다'라고만 답한다" — 슬랙 `@Sam 판단 루프를 지금 한 번 돌려 주세요` → "보류 중입니다" 확인(2026-10-01) |
 | 모의계좌 | KODEX 200 1주 · 평단 111,340원 (정리·추가매수 안 함) |
 
 보류 해제 시: 4건이 닫히면 Sophie에게 해제 심의 안건(rev 2, 8번째 항목 `index_valuation_method` 포함) 상정 →
