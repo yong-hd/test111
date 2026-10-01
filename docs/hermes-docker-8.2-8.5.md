@@ -279,6 +279,19 @@ hermes -p sophie council doctor      # 플러그인·게이트웨이·칸반·�
 
 ---
 
+### 8.5 진행 기록 (이 VPS, 2026-10-01)
+
+- council 0.13.0을 sophie에만 설치, `council doctor` 4항목 통과. sophie `terminal.cwd`도 magma-finance-lab으로 변경.
+- **첫 예행 요청에서 Sophie가 플러그인을 쓰지 않고** `hermes -p <패널> -z`로 직접 부르는 회의를 설계함 → 거절하고
+  `/council …` 슬래시로 다시 요청하니 `council start --dry-run … --hitl --no-relay` 로 플러그인 예행.
+- 회의 `kodex200-dca-review`(보드 `council-kodex200-dca-review`): ada → oliver → noah 각 1발언(max_turns 3 = 발언 3개), 약 16분.
+- **HITL 게이트 미작동:** HITL은 코드 게이트가 아니라 의장 카드에 주는 지시문(`## [결정 요청]` 작성 후 정지)이라,
+  의장 카드가 FINAL을 바로 쓰면 `pending_decision`이 뜨지 않습니다. 회의 결론은 루프에 자동 반영되지 않으므로 사람 결정은 그대로 유효.
+- 패널 합의: 채택 지지 없음, BacktestReport draft, 낙폭 -40.81% 미검증. 갈린 점: 보류+추가검증(Noah·의장) vs 추가검증만.
+- Oliver가 안건의 "8개 vs 이름 7개" 불일치를 지적 → 8번째는 `index_valuation_method`(안건 초안 누락, 스냅샷은 정합).
+- 중계는 끔(안건에 평단·한도 수치). 산출물: `/opt/data/profiles/sophie/.council/kodex200-dca-review/{summary,report,decisions,transcript.export}.md`
+- 결정이 `보류`이면 08:40 판단 루프 크론(`09971d8a1452`)을 **사람이 직접** 멈춰야 합니다(자동 반영 없음).
+
 ## 문제 → 원인 빠른 표 (Docker 추가분)
 
 | 증상 | Docker에서의 원인 | 조치 |
