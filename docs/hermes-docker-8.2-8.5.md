@@ -292,6 +292,26 @@ hermes -p sophie council doctor      # 플러그인·게이트웨이·칸반·�
 - 중계는 끔(안건에 평단·한도 수치). 산출물: `/opt/data/profiles/sophie/.council/kodex200-dca-review/{summary,report,decisions,transcript.export}.md`
 - 결정이 `보류`이면 08:40 판단 루프 크론(`09971d8a1452`)을 **사람이 직접** 멈춰야 합니다(자동 반영 없음).
 
+### 8장 마무리 — 현재 운영 상태 (2026-10-01)
+
+| 항목 | 상태 |
+|---|---|
+| 투자위원회 결정 | **보류 + 추가 검증**, 조건부 해제(배당 계약 · 배당 포함 재계산 · 낙폭 -40.81% 원본 대조 · 승인 만료 10분 검증). 공식 출처 막힌 항목은 미확보 사유 기록으로 갈음 |
+| 기준 문서 | `reports/council/kodex200-dca-review/00-최종결정.md` (회의 산출물 4종보다 우선) |
+| 08:40 판단 루프 `09971d8a1452` | **paused** (삭제 안 함) |
+| 18:30 수집 `b051cb7d7538` | scheduled (`artifacts/market-daily/`) |
+| Sam SOUL | 판단 루프 절 맨 위에 "보류 중 … '보류 중입니다'라고만 답한다" |
+| 모의계좌 | KODEX 200 1주 · 평단 111,340원 (정리·추가매수 안 함) |
+
+보류 해제 시: 4건이 닫히면 Sophie에게 해제 심의 안건(rev 2, 8번째 항목 `index_valuation_method` 포함) 상정 →
+사람이 해제 결정 → Sam SOUL의 보류 줄 삭제 → `09971d8a1452` resume.
+
+남은 운영 과제(강의 밖):
+- Supabase PAT 교체(입력 과정에서 여러 번 붙여 넣음) — 콘솔 Access Tokens에서 Revoke 후 재발급, ada·sam `.env` 갱신
+- 텔레그램 토큰 중복(default·sophie) 경고, `terminal.env_passthrough` 문자열 경고
+- 모델 구독 한도(429) 대비 `hermes fallback add`
+- `quote_read` 장중 재확인, 포트 32773 공개 여부
+
 ## 문제 → 원인 빠른 표 (Docker 추가분)
 
 | 증상 | Docker에서의 원인 | 조치 |
