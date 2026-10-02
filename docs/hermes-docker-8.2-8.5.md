@@ -309,7 +309,7 @@ hermes -p sophie council doctor      # 플러그인·게이트웨이·칸반·�
 | 조건 | 상태 | 근거 |
 |---|---|---|
 | 1 배당 반영 계약 | **닫힘** | `backtest/price-dividend-contract.md` (lab 커밋 f51c8d8), 근거 `docs/gate1-dividend-evidence.md` |
-| 2 재계산·손검산·감사 | 재계산 완료, 감사 테스트 미실행 | lab 커밋 5fd8c83 (backtest.py 원주가+분배금, dividends-069500.csv 41회). 단위 테스트 14 통과 / 감사 3 skip(vibe_finance_kit 없음) |
+| 2 재계산·손검산·감사 | 재계산·테스트 완료, 실제 보고서 감사·손검산 확인 대기 | lab 커밋 5fd8c83 (backtest.py 원주가+분배금, dividends-069500.csv 41회). 테스트 17/17 통과 — 감사 테스트는 `vibe-finance-kit/.venv/bin/python`으로 실행해야 skip 안 됨 |
 | 3 낙폭 원본 대조 | 값 산출, 원본 대조 대기 | 원주가 252봉 낙폭 -40.93% (기존 -40.81%) |
 | 4 승인 만료 10분 | 보류 | 재심의에서 해제 검토가 필요할 때만 진행 |
 
