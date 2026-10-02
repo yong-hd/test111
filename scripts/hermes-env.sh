@@ -14,13 +14,13 @@ fi
 
 # 컨테이너 안 대화형 셸 (로그인 셸이라 ~/.local/bin이 PATH에 잡힘)
 export HERMES_USER="${HERMES_USER:-hermes}"   # 게이트웨이 실행 사용자. root로 작업하면 root 소유 파일이 생김
-hsh()  { docker exec -it -u "$HERMES_USER" "$HC" bash -l; }
+hsh()  { docker exec -it -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -u "$HERMES_USER" "$HC" bash -l; }
 # 관리용 root 셸 (chown, 패키지 설치 등)
-hroot(){ docker exec -it "$HC" bash -l; }
+hroot(){ docker exec -it -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 "$HC" bash -l; }
 # 컨테이너 안에서 명령 한 줄:  hx 'kiwoomcli doctor'
-hx()   { docker exec -it -u "$HERMES_USER" "$HC" bash -lc "$*"; }
+hx()   { docker exec -it -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -u "$HERMES_USER" "$HC" bash -lc "$*"; }
 # 특정 프로필로 hermes 실행 (전역 기본 프로필을 바꾸지 않음):  hp sam chat   /  hp sophie council doctor
-hp()   { local p="$1"; shift; docker exec -it -u "$HERMES_USER" "$HC" bash -lc 'hermes -p "$0" "$@"' "$p" "$@"; }
+hp()   { local p="$1"; shift; docker exec -it -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -u "$HERMES_USER" "$HC" bash -lc 'hermes -p "$0" "$@"' "$p" "$@"; }
 # 로그
 hlogs(){ docker logs --tail "${1:-200}" -f "$HC"; }
 # 읽기 전용 점검
