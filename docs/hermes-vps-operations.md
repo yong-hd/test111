@@ -274,3 +274,24 @@ hp sophie council doctor
 hlogs 200
 docker restart "$HC"
 ```
+
+## 코드 변경 카드 처리 절차 (2026-10-04 대표 결정)
+
+반복 검토는 에이전트가, 대표는 승인만 한다.
+
+| 단계 | 담당 |
+|---|---|
+| 1. 카드 작업 | Ada |
+| 2. 읽기 전용 코드 검토(결과 영향, 미래 정보, 한도, 자기 단정 필드) | Noah |
+| 3. 전체 테스트(kit 가상환경, skip 0) + 요약(파일·줄 수·테스트·위험·커밋 대상) | Sophie |
+| 4. `커밋 승인` | 대표 |
+| 5. 요약에 적힌 파일만 커밋, 커밋 번호·sha256 앞 12자리 보고(`git add -A`·push 금지) | Sophie |
+| 6. `다음 카드 진행` 때만 다음 카드 unblock | 대표 → Sophie |
+
+limits.md, rules 문서, 계약 파일, SOUL은 여전히 대표가 직접 고친다.
+
+### 한 번에 보여 주기: `hreview` (호스트 `~/.bashrc`)
+
+```bash
+hreview() { HC=$(docker ps --format '{{.Names}}' | grep hermes-agent | head -1); docker exec -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -u hermes -w /opt/data/.hermes/workspace/magma-finance-lab "$HC" bash -lc 'echo "== status"; git status --short; echo "== log"; git log --oneline -3; echo "== diffstat"; git diff --stat; echo "== tests"; /opt/data/.hermes/workspace/vibe-finance-kit/.venv/bin/python -m unittest discover -s tests 2>&1 | tail -3; echo "== diff"; git diff; for f in $(git ls-files --others --exclude-standard | grep -v "^scripts/"); do echo "== new: $f"; cat "$f"; done'; }
+```
